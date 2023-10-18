@@ -34,6 +34,7 @@ struct CliCommand {
     command: SubCommand,
 }
 
+// Dev users supported by the program
 #[derive(PartialEq, Debug, Clone, Copy)]
 enum User {
     Alice,
@@ -81,11 +82,7 @@ enum SubCommand {
     TrackProposalStatus,
 }
 
-struct Program {
-    api: OnlineClient<SubstrateConfig>,
-    user: User,
-}
-
+// Create a vote for a proposal
 fn create_vote(
     ref_index: u32,
     aye: bool,
@@ -102,18 +99,27 @@ fn create_vote(
     democracy.vote(ref_index, vote)
 }
 
+// The program context
+struct Program {
+    api: OnlineClient<SubstrateConfig>,
+    user: User,
+}
+
+// Helper macro to print to the console using the program context
 macro_rules! print {
-    ($self:expr, $($arg:tt)*) => {
-        println!("[{}] {}", $self.user, format!($($arg)*));
+    ($prg:expr, $($arg:tt)*) => {
+        println!("[{}] {}", $prg.user, format!($($arg)*));
     };
 }
 
 impl Program {
+    /// Create a new program context
     async fn new(url: &str, user: User) -> Result<Self> {
         let api = OnlineClient::<SubstrateConfig>::from_url(url).await?;
         Ok(Self { api, user })
     }
 
+    /// Wait for a specific event to occur
     async fn wait_for_event<Ev: StaticEvent>(&self) -> Result<Ev> {
         let event = self
             .api
@@ -128,6 +134,7 @@ impl Program {
         event.ok_or_else(|| anyhow::anyhow!("event not found"))
     }
 
+    /// Submit a transaction and wait for it to be finalized
     async fn submit_and_watch(
         &self,
         tx: &impl TxPayload,
